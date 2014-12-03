@@ -10,19 +10,21 @@ from Bio.PDB.Atom import Atom
 from Bio.Alphabet import Gapped
 from Bio.Alphabet import IUPAC
 
-from pdbalign import align_to_pdb
-from pdbalign import get_pdb_indices
-from pdbalign import compute_distance_matrix
-
 from BioExt.align import Aligner
 from BioExt.scorematrices import BLOSUM62
+
+from pdbalign import align_chain
+from pdbalign import align_chains_msa
+from pdbalign import compute_distance_matrix
 
 
 class TestPdbalign(unittest.TestCase):
     # Need to reduce gap penalty to make test alignments work
-    aligner = Aligner(BLOSUM62.load(), do_codon=False, open_insertion=-1, open_deletion=-1)
 
-    def test_align_to_pdb(self):
+    aligner = Aligner(BLOSUM62.load(), do_codon=False,
+                      open_insertion=-1, open_deletion=-1)
+
+    def test_align_chain(self):
         problems = (
             (Seq("AHSVH"), Seq("AHVH"), [0, 1, -1, 2, 3]),
             (Seq("AHVH"), Seq("AHSVH"), [0, 1, 3, 4]),
@@ -32,13 +34,15 @@ class TestPdbalign(unittest.TestCase):
             (Seq("AH-VH"), Seq("AHSVH"), [0, 1, -1, 3, 4]),
             (Seq("AHS-H"), Seq("AHSVH"), [0, 1, 2, -1, 4]),
             (Seq("AHSV-"), Seq("AHSVH"), [0, 1, 2, 3, -1]),
+            (Seq("AHSVHCCCCCCFPVW"), Seq("AHSVHFPVW"),
+             [0, 1, 2, 3, 4, -1, -1, -1, -1, -1, -1, 5, 6, 7, 8]),
         )
 
         for s, p, e in problems:
-            result = align_to_pdb(s, p, missing=-1, aligner=self.aligner)
+            result = align_chain(s, p, missing=-1, aligner=self.aligner)
             self.assertEqual(e, result)
 
-    def test_get_pdb_indices(self):
+    def test_align_chains_msa(self):
         sequences = [Seq("AHSVH"),
                      Seq("AH-VH"),
                      Seq("A-SVH")]
@@ -52,7 +56,7 @@ class TestPdbalign(unittest.TestCase):
 
         for r in residues:
             chain.add(r)
-        indices = get_pdb_indices(sequences, [chain], aligner=self.aligner)
+        indices = align_chains_msa(sequences, [chain], aligner=self.aligner)
         expected = np.array([[0, 1, 2, 3, 4]])
         self.assertTrue(np.all(indices == expected))
 

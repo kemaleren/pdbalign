@@ -13,7 +13,7 @@ neighbors with a default distance.
 
 Output is a human-readable text file of the distance matrix.
 
-Chains should be given as comma-separated letters. Example: A,E,I
+Chains should be seperated by commas. Example: A,E,I
 
 Usage:
   pdbalign.py [options] <fasta> <pdb> <chains> <outfile>
@@ -67,7 +67,7 @@ def get_chain_coords(chain):
     return np.vstack(result)
 
 
-def align_to_pdb(seq, pdb_seq, missing=-1, aligner=None):
+def align_chain(seq, pdb_seq, missing=-1, aligner=None):
     """Align sequence to PDB chain.
 
     Returns a PDB index for each position of the original MSA.
@@ -76,6 +76,8 @@ def align_to_pdb(seq, pdb_seq, missing=-1, aligner=None):
 
     """
     if aligner is None:
+        # TODO: support different scoring matrices and gap penalties
+        # on command line
         aligner = Aligner(BLOSUM62.load(), do_codon=False)
     _, seq_aligned, pdb_seq_aligned = aligner(seq, pdb_seq)
     pdb_idx = 0  # pointer to position in pdb chain sequence
@@ -110,7 +112,7 @@ def align_to_pdb(seq, pdb_seq, missing=-1, aligner=None):
     return result
 
 
-def get_pdb_indices(sequences, chains, aligner=None):
+def align_chains_msa(sequences, chains, aligner=None):
     """Align each sequence of MSA against chains in the model. Returns
     indices of chain sequence.
 
@@ -123,7 +125,7 @@ def get_pdb_indices(sequences, chains, aligner=None):
     for seq in sequences:
         indices = []
         for chain_seq in chain_seqs:
-            i = align_to_pdb(seq, chain_seq, missing=-1, aligner=aligner)
+            i = align_chain(seq, chain_seq, missing=-1, aligner=aligner)
             indices.append(i)
         pdb_index_array.append(indices)
 
@@ -133,6 +135,15 @@ def get_pdb_indices(sequences, chains, aligner=None):
     modes, _ = mode(pdb_index_array, axis=2)
     modes = modes.squeeze().astype(np.int)
     return modes
+
+
+def make_coord_array(idx_array, chains):
+    """get coordinates from pdb indices"""
+    chain_coords = list(get_chain_coords(c) for c in chains)
+    coord_array = np.array(list(c[idx_array[i]]
+                                for i, c in enumerate(chain_coords)))
+    coord_array = coord_array.transpose(1, 0, 2)
+    return coord_array
 
 
 def write_coord_array(outfile, coord_array, chains):
@@ -202,16 +213,11 @@ if __name__ == "__main__":
         if c not in model:
             raise Exception("Chain '{}' not found. Candidates: {}".format(
                 c, sorted(model.child_dict.keys())))
-
     chains = list(model[c] for c in chain_ids)
 
     # do alignment and get coordinates
-    pdb_idx_array = get_pdb_indices(sequences, chains)
-    # get coordinates from pdb indices
-    chain_coords = list(get_chain_coords(c) for c in chains)
-    coord_array = np.array(list(c[pdb_idx_array[i]]
-                                for i, c in enumerate(chain_coords)))
-    coord_array = coord_array.transpose(1, 0, 2)
+    idx_array = align_chains_msa(sequences, chains)
+    coord_array = make_coord_array(idx_array, chains)
 
     dist_matrix = compute_distance_matrix(coord_array, radius, default_dist)
     np.savetxt(outfile, dist_matrix, delimiter=delimiter)
