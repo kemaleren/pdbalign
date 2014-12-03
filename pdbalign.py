@@ -48,7 +48,12 @@ def get_chain_coords(chain):
 
 
 def transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1):
-    """Missing indices get `missing`"""
+    """Returns a pdb index for each index of the original MSA.
+
+    Unaligned indices (either in original MSA or in PDB alignment) get
+    `missing`.
+
+    """
     pdb_idx = 0  # pointer to position in pdb chain sequence
     msa_idx = 0  # pointer to position in original MSA coordinates
     result = []
