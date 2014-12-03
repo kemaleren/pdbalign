@@ -22,7 +22,7 @@ Options:
   -r --radius=<FLOAT>  Radius for connecting neighbors [default: 20]
   --default-distance=<FLOAT>  Distance to assign to linear
                               neighbors [default: 5]
-  --delimiter=<STRING>  Delimiter for output [default: \t]
+  --delimiter=<STRING>  Delimiter for output [default: ' ']
   -h --help  Print this screen
 
 """
