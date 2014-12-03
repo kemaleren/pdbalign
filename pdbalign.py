@@ -109,11 +109,11 @@ def align_to_pdb(seq, pdb_seq, missing=-1):
     return result
 
 
-def get_pdb_coords(sequences, model, chains):
+def get_pdb_indices(sequences, chains):
     """Align each sequence of MSA against chains in the model. Returns
-    coordinates of chain sequence.
+    indices of chain sequence.
 
-    Result is a np.ndarray with shape (n_indices, n_chains, 3).
+    Result is a np.ndarray with shape (n_chains, n_indices).
 
     """
     chain_seqs = list(get_chain_seq(c) for c in chains)
@@ -123,7 +123,8 @@ def get_pdb_coords(sequences, model, chains):
     for seq in sequences:
         indices = []
         for chain_seq in chain_seqs:
-            indices.append(align_to_pdb(seq, chain_seq, missing=-1))
+            i = align_to_pdb(seq, chain_seq, missing=-1)
+            indices.append(i)
         pdb_index_array.append(indices)
 
     # collapse to consensus
@@ -205,7 +206,7 @@ if __name__ == "__main__":
     chains = list(model[c] for c in chain_ids)
 
     # do alignment and get coordinates
-    pdb_idx_array = get_pdb_coords(sequences, model, chains)
+    pdb_idx_array = get_pdb_indices(sequences, chains)
     # get coordinates from pdb indices
     chain_coords = list(get_chain_coords(c) for c in chains)
     coord_array = np.array(list(c[pdb_idx_array[i]]
