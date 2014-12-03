@@ -1,26 +1,39 @@
 #!/usr/bin/env python
 
-"""Compute coordinates for positions in MSA from a PDB file.
+"""Compute distance matrix for positions in a multiple sequence
+alignment.
 
-Each sequence is aligned to PDB chains. The residue coordinates are
-mapped back to the MSA. Each position gets the most common
-coordinates.
+Each sequence is aligned to multiple PDB chains. The residue
+coordinates are mapped back to the MSA. Each position gets the most
+common coordinates.
 
-Output has one line per position in the MSA. Each line contains the
-coordinates for the given position for all requested chains. If
-coordinates are not available, each coordinate gets "nan".
+Positions are then connected to neighbors within a certain
+radius. Positions without coordinates are connected to their linear
+neighbors with a default distance.
+
+Output is a human-readable text file of the distance matrix.
 
 Chains should be given as comma-separated letters. Example: A,E,I
 
 Usage:
-  pdbalign.py <fasta> <pdb> <chains> <outfile>
+  pdbalign.py [options] <fasta> <pdb> <chains> <outfile>
+
+Options:
+  -r --radius=<FLOAT>  Radius for connecting neighbors [default: 20]
+  --default-distance=<FLOAT>  Distance to assign to linear
+                              neighbors [default: 5]
+  --delimiter=<STRING>  Delimiter for output [default: \t]
+  -h --help  Print this screen
 
 """
 
 import os
 import sys
 
+from docopt import docopt
+
 import numpy as np
+from numpy.linalg import norm
 from scipy.stats import mode
 
 from Bio.Seq import Seq
@@ -96,24 +109,19 @@ def align_to_pdb(seq, pdb_seq, missing=-1):
 
 def get_pdb_coords(sequences, model, chains):
     """Align each sequence of MSA against chains in the model. Returns
-    coordinates.
+    coordinates of chain sequence.
 
     Result is a np.ndarray with shape (n_indices, n_chains, 3).
 
     """
-    chain_dict = {c: model[c] for c in chains}
-    chain_seqs = {c: get_chain_seq(chain)
-                  for c, chain in chain_dict.items()}
-    chain_coords = {c: get_chain_coords(chain)
-                    for c, chain in chain_dict.items()}
-
+    chain_seqs = list(get_chain_seq(c) for c in chains)
     # align to PDB; get pdb indices for MSA coordinates
     aligner = Aligner(BLOSUM62.load(), do_codon=False)
     pdb_index_array = []
     for seq in sequences:
         indices = []
-        for c in chains:
-            indices.append(align_to_pdb(seq, chain_seqs[c], missing=-1))
+        for chain_seq in chain_seqs:
+            indices.append(align_to_pdb(seq, chain_seq, missing=-1))
         pdb_index_array.append(indices)
 
     # collapse to consensus
@@ -121,16 +129,12 @@ def get_pdb_coords(sequences, model, chains):
     pdb_index_array = pdb_index_array.transpose(1, 2, 0)
     modes, _ = mode(pdb_index_array, axis=2)
     modes = modes.squeeze().astype(np.int)
-
-    # get coordinates from pdb indices
-    coord_array = np.array(list(chain_coords[c][modes[i]]
-                                for i, c in enumerate(chains)))
-    return coord_array
+    return modes
 
 
 def write_coord_array(outfile, coord_array, chains):
-    n_posns = coord_array.shape[1]
-    coord_array = coord_array.transpose(1, 0, 2).reshape((n_posns, -1))
+    coord_array = coord_array.reshape((n_posns, -1))
+    n_posns = coord_array.shape[0]
     with open(outfile, 'w') as f:
         header = "\t".join("{}_{}".format(chain, coord)
                            for chain in chains for coord in "xyz")
@@ -141,15 +145,43 @@ def write_coord_array(outfile, coord_array, chains):
             f.write("\n")
 
 
+def compute_distance_matrix(coord_array, radius, default_dist):
+    # make distance matrix
+    n_posns = coord_array.shape[0]
+    n_chains = coord_array.shape[1]
+    dists = np.empty((n_posns, n_posns))
+    dists[:] = np.inf
+    np.fill_diagonal(dists, 0)
+    # find neighbors in 3D space
+    for i in range(n_posns):
+        for j in range(i + 1, n_posns):
+            d = np.inf
+            for chain1 in range(n_chains):
+                for chain2 in range(chain1 + 1, n_chains):
+                    coord1 = coord_array[i, chain1]
+                    coord2 = coord_array[j, chain2]
+                    new_d = norm(coord1 - coord2)
+                    if np.isnan(new_d):
+                        continue
+                    d = min(new_d, d)
+            if d < radius:
+                dists[i, j] = dists[j, i] = d
+    # connect linear neighbors
+    for i in range(n_posns - 1):
+        if np.isinf(dists[i, i + 1]):
+            dists[i, i + 1] = dists[i + 1, i] = default_dist
+    return dists
+
+
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    if len(args) != 4:
-        sys.stderr.write("Usage: pdbalign.py <fasta> <pdb> <chains> <outfile>\n")
-        sys.exit(1)
-    fasta_file = args[0]
-    pdb_file = args[1]
-    chains = args[2].split(",")
-    outfile = args[3]
+    args = docopt(__doc__)
+    fasta_file = args["<fasta>"]
+    pdb_file = args["<pdb>"]
+    chain_ids = args["<chains>"].split(",")
+    outfile = args["<outfile>"]
+    radius = float(args["--radius"])
+    default_dist = float(args["--default-distance"])
+    delimiter = args["--delimiter"]
 
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
@@ -162,11 +194,21 @@ if __name__ == "__main__":
     model = parser.get_structure(structure_id, pdb_file)[0]
 
     # check that all chains are present
-    for c in chains:
+    for c in chain_ids:
         if c not in model:
             raise Exception("Chain '{}' not found. Candidates: {}".format(
                 c, sorted(model.child_dict.keys())))
 
+    chains = list(model[c] for c in chain_ids)
+
     # do alignment and get coordinates
-    coord_array = get_pdb_coords(sequences, model, chains)
-    write_coord_array(outfile, coord_array, chains)
+    pdb_idx_array = get_pdb_coords(sequences, model, chains)
+    # get coordinates from pdb indices
+    chain_coords = list(get_chain_coords(c) for c in chains)
+    coord_array = np.array(list(c[pdb_idx_array[i]]
+                                for i, c in enumerate(chain_coords)))
+    n_posns = coord_array.shape[0]
+    coord_array = coord_array.transpose(1, 0, 2)
+
+    dist_matrix = compute_distance_matrix(coord_array, radius, default_dist)
+    np.savetxt(outfile, dist_matrix, delimiter=delimiter)
