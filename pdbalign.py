@@ -71,30 +71,28 @@ if True:
     for seq in sequences:
         alignments = []
         for chain_id, pdb_seq in chain_seqs.items():
-            score, seq1, seq2 = aligner(pdb_seq, seq)
-            alignments.append((score, chain_id, seq1, seq2))
+            score, pdb_seq_aligned, seq_aligned = aligner(pdb_seq, seq)
+            alignments.append((score, chain_id, pdb_seq_aligned, seq_aligned))
         alignments = sorted(alignments)[::-1][:top]
         results.append(alignments)
 
-    # transfer coordinates
+    # transfer coordinates to alignment
     all_coords = []
     for seq, alignments in zip(sequences, results):
         seq_coords = []
         for alignment in alignments:
-            _, chain_id, seq1, seq2 = alignment
+            _, chain_id, pdb_seq_aligned, seq_aligned = alignment
             coords = chain_coords[chain_id]
             pdb_idx = 0
             result = []        
-            for idx in range(len(seq1)):
-                if seq1[idx] != "-" and seq2[idx] != "-":
+            for idx in range(len(pdb_seq_aligned)):
+                if pdb_seq_aligned[idx] != "-" and seq_aligned[idx] != "-":
                     result.append(coords[pdb_idx])
-                elif seq1[idx] == "-" and seq2[idx] != "-":
+                elif pdb_seq_aligned[idx] == "-" and seq_aligned[idx] != "-":
                     result.append(None)
-                if seq1[idx] != "-":
+                if pdb_seq_aligned[idx] != "-":
                     pdb_idx += 1
             seq_coords.append(result)
         all_coords.append(list(zip(*seq_coords)))
-            
-
 
     # write output
