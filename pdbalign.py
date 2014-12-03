@@ -1,7 +1,22 @@
-"""Compute coordinates for MSA from a PDB file.
+#!/usr/bin/env python
+
+"""Compute coordinates for positions in MSA from a PDB file.
+
+Each sequence is aligned to PDB chains. The residue coordinates are
+mapped back to the MSA. Each position gets the most common
+coordinates.
+
+Output has one line per position in the MSA. Each line contains the
+coordinates for the given position for all requested chains. If
+coordinates are not available, each coordinate gets "nan".
+
+Chains should be given as comma-separated letters.
+
+Example:
+  pdb_align.py A,E,I <fasta> <pdb> <outfile>
 
 Usage:
-  pdb_align.py [options] <fasta> <pdb> <chains>
+  pdb_align.py <chains> <fasta> <pdb> <outfile>
 
 Options:
   -h --help  Display this screen.
@@ -84,14 +99,12 @@ def transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1):
     return result
 
 
-if True:
-    # args = docopt(__doc__)
-    # fasta_file = args["<fasta>"]
-    # pdb_file = args["<pdb>"]
-
-    fasta_file = "env.fa"
-    pdb_file = "4NCO.pdb"
-    chains = ['A', 'E', 'I']
+if __name__ == "__main__":
+    args = docopt(__doc__)
+    chains = args["<chains>"].split(",")
+    fasta_file = args["<fasta>"]
+    pdb_file = args["<pdb>"]
+    outfile = args["<outfile>"]
 
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
@@ -101,9 +114,14 @@ if True:
     # read PDB structures; use filename as id
     structure_id = os.path.basename(pdb_file).split('.')[0]
     parser = biopdb.PDBParser()
-    structure = parser.get_structure(structure_id, pdb_file)
+    model = parser.get_structure(structure_id, pdb_file)[0]
 
-    chain_dict = {c: structure[0][c] for c in chains}
+    for c in chains:
+        if c not in model:
+            raise Exception("Chain '{}' not found. Candidates: {}".format(
+                c, sorted(model.child_dict.keys())))
+
+    chain_dict = {c: model[c] for c in chains}
     chain_seqs = {c: get_chain_seq(chain) for c, chain in chain_dict.items()}
     chain_coords = {c: get_chain_coords(chain) for c, chain in chain_dict.items()}
 
@@ -127,4 +145,14 @@ if True:
     coord_array = np.array(list(chain_coords[c][modes[i]]
                                 for i, c in enumerate(chains)))
 
-    # TODO: write output
+    # write output
+    n_posns = coord_array.shape[1]
+    coord_array = coord_array.transpose(1, 0, 2).reshape((n_posns, -1))
+    with open(outfile, 'w') as f:
+        header = "\t".join("{}_{}".format(chain, coord)
+                           for chain in chains for coord in "xyz")
+        f.write(header)
+        f.write("\n")
+        for line in coord_array:
+            f.write("\t".join(map(str, line)))
+            f.write("\n")
