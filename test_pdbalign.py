@@ -17,6 +17,7 @@ from pdbalign import compute_distance_matrix
 from BioExt.align import Aligner
 from BioExt.scorematrices import BLOSUM62
 
+
 class TestPdbalign(unittest.TestCase):
     # Need to reduce gap penalty to make test alignments work
     aligner = Aligner(BLOSUM62.load(), do_codon=False, open_insertion=-1, open_deletion=-1)
