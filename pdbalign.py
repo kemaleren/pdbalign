@@ -19,11 +19,12 @@ Usage:
   pdbalign.py [options] <fasta> <pdb> <chains> <outfile>
 
 Options:
-  -r --radius=<FLOAT>  Radius for connecting neighbors [default: 20]
-  --default-distance=<FLOAT>  Distance to assign to linear
-                              neighbors [default: 5]
-  --delimiter=<STRING>  Delimiter for output [default: ' ']
-  -h --help  Print this screen
+  -r --radius=<FLOAT>      Radius for connecting neighbors [default: 20]
+  --default-dist=<FLOAT>   Distance to assign to linear neighbors [default: 5]
+  --infinite-dist=<FLOAT>  Distance for disconnected nodes. May be a float or
+                           'inf' [default: 0]
+  --delimiter=<STRING>     Delimiter for output [default: ' ']
+  -h --help                Print this screen
 
 """
 
@@ -159,7 +160,7 @@ def write_coord_array(outfile, coord_array, chains):
             f.write("\n")
 
 
-def compute_distance_matrix(coord_array, radius, default_dist):
+def compute_distance_matrix(coord_array, radius, default_dist, inf_dist):
     """make neighbor distance matrix"""
     n_posns = coord_array.shape[0]
     n_chains = coord_array.shape[1]
@@ -184,7 +185,7 @@ def compute_distance_matrix(coord_array, radius, default_dist):
     for i in range(n_posns - 1):
         if np.isinf(dists[i, i + 1]):
             dists[i, i + 1] = dists[i + 1, i] = default_dist
-    dists[np.isinf(dists)] = -1
+    dists[np.isinf(dists)] = inf_dist
     return dists
 
 
@@ -195,8 +196,14 @@ if __name__ == "__main__":
     chain_ids = args["<chains>"].split(",")
     outfile = args["<outfile>"]
     radius = float(args["--radius"])
-    default_dist = float(args["--default-distance"])
+    default_dist = float(args["--default-dist"])
+    inf_dist = args["--infinite-dist"]
     delimiter = args["--delimiter"]
+
+    if inf_dist == "inf":
+        inf_dist = np.inf
+    else:
+        inf_dist = float(inf_dist)
 
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
@@ -219,5 +226,6 @@ if __name__ == "__main__":
     idx_array = align_chains_msa(sequences, chains)
     coord_array = make_coord_array(idx_array, chains)
 
-    dist_matrix = compute_distance_matrix(coord_array, radius, default_dist)
+    dist_matrix = compute_distance_matrix(coord_array, radius,
+                                          default_dist, inf_dist)
     np.savetxt(outfile, dist_matrix, delimiter=delimiter)
