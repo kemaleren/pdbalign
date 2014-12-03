@@ -62,13 +62,17 @@ def get_chain_coords(chain):
     return np.vstack(result)
 
 
-def transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1):
-    """Returns a pdb index for each index of the original MSA.
+def align_to_pdb(seq, pdb_seq, missing=-1):
+    """Align sequence to PDB chain.
+
+    Returns a pdb index for each index of the original MSA.
 
     Unaligned indices (either in original MSA or in PDB alignment) get
     `missing`.
 
     """
+    aligner = Aligner(BLOSUM62.load(), do_codon=False)
+    _, seq_aligned, pdb_seq_aligned = aligner(seq, pdb_seq)
     pdb_idx = 0  # pointer to position in pdb chain sequence
     msa_idx = 0  # pointer to position in original MSA coordinates
     result = []
@@ -99,6 +103,38 @@ def transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1):
     return result
 
 
+def get_pdb_coords(sequences, model, chains):
+    """Align each sequence of MSA against chains in the model. Returns
+    coordinates.
+
+    Result is a np.ndarray with shape (n_indices, n_chains, 3).
+
+    """
+    chain_dict = {c: model[c] for c in chains}
+    chain_seqs = {c: get_chain_seq(chain) for c, chain in chain_dict.items()}
+    chain_coords = {c: get_chain_coords(chain) for c, chain in chain_dict.items()}
+
+    # align to PDB; get pdb indices for MSA coordinates
+    aligner = Aligner(BLOSUM62.load(), do_codon=False)
+    pdb_index_array = []
+    for seq in sequences:
+        indices = []
+        for c in chains:
+            indices.append(align_to_pdb(seq, chain_seqs[c], missing=-1))
+        pdb_index_array.append(indices)
+
+    # collapse to consensus
+    pdb_index_array = np.array(pdb_index_array, dtype=np.int)
+    pdb_index_array = pdb_index_array.transpose(1, 2, 0)
+    modes, _ = mode(pdb_index_array, axis=2)
+    modes = modes.squeeze().astype(np.int)
+
+    # get coordinates from pdb indices
+    coord_array = np.array(list(chain_coords[c][modes[i]]
+                                for i, c in enumerate(chains)))
+    return coord_array
+
+
 if __name__ == "__main__":
     args = docopt(__doc__)
     chains = args["<chains>"].split(",")
@@ -116,34 +152,13 @@ if __name__ == "__main__":
     parser = biopdb.PDBParser()
     model = parser.get_structure(structure_id, pdb_file)[0]
 
+    # check that all chains are present
     for c in chains:
         if c not in model:
             raise Exception("Chain '{}' not found. Candidates: {}".format(
                 c, sorted(model.child_dict.keys())))
 
-    chain_dict = {c: model[c] for c in chains}
-    chain_seqs = {c: get_chain_seq(chain) for c, chain in chain_dict.items()}
-    chain_coords = {c: get_chain_coords(chain) for c, chain in chain_dict.items()}
-
-    # align and transfer coordinates to alignment
-    aligner = Aligner(BLOSUM62.load(), do_codon=False)
-    pdb_index_array = []
-    for seq in sequences:
-        indices = []
-        for c in chains:
-            _, seq_aligned, pdb_seq_aligned = aligner(seq, chain_seqs[c])
-            indices.append(transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1))
-        pdb_index_array.append(indices)
-
-    # collapse to consensus coordinates
-    pdb_index_array = np.array(pdb_index_array, dtype=np.int)
-    pdb_index_array = pdb_index_array.transpose(1, 2, 0)
-    modes, _ = mode(pdb_index_array, axis=2)
-    modes = modes.squeeze().astype(np.int)
-
-    # get coordinates from pdb indices
-    coord_array = np.array(list(chain_coords[c][modes[i]]
-                                for i, c in enumerate(chains)))
+    coord_array = get_pdb_coords(sequences, model, chains)
 
     # write output
     n_posns = coord_array.shape[1]
