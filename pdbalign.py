@@ -47,12 +47,12 @@ def get_chain_seq(chain):
 
 
 def residue_center(r):
-    """the mean of the residue's atom coordinates"""
+    """mean of the residue's atom coordinates"""
     return np.vstack(list(a.coord for a in r)).mean(axis=0)
 
 
 def get_chain_coords(chain):
-    """Residue coordinates."""
+    """mean coordinates for each residue in the chain, with dummy at end"""
     result = (list(residue_center(r) for r in chain.get_residues()))
     # append dummy coordinates
     result.append([np.nan] * 3)
@@ -62,10 +62,9 @@ def get_chain_coords(chain):
 def align_to_pdb(seq, pdb_seq, missing=-1):
     """Align sequence to PDB chain.
 
-    Returns a pdb index for each index of the original MSA.
+    Returns a PDB index for each position of the original MSA.
 
-    Unaligned indices (either in original MSA or in PDB alignment) get
-    `missing`.
+    Gaps (either in original MSA or in PDB alignment) get `missing` value.
 
     """
     aligner = Aligner(BLOSUM62.load(), do_codon=False)
