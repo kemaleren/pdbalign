@@ -67,7 +67,7 @@ def get_chain_coords(chain):
     return np.vstack(result)
 
 
-def align_to_pdb(seq, pdb_seq, missing=-1):
+def align_to_pdb(seq, pdb_seq, missing=-1, aligner=None):
     """Align sequence to PDB chain.
 
     Returns a PDB index for each position of the original MSA.
@@ -75,7 +75,8 @@ def align_to_pdb(seq, pdb_seq, missing=-1):
     Gaps (either in original MSA or in PDB alignment) get `missing` value.
 
     """
-    aligner = Aligner(BLOSUM62.load(), do_codon=False)
+    if aligner is None:
+        aligner = Aligner(BLOSUM62.load(), do_codon=False)
     _, seq_aligned, pdb_seq_aligned = aligner(seq, pdb_seq)
     pdb_idx = 0  # pointer to position in pdb chain sequence
     msa_idx = 0  # pointer to position in original MSA coordinates
@@ -109,7 +110,7 @@ def align_to_pdb(seq, pdb_seq, missing=-1):
     return result
 
 
-def get_pdb_indices(sequences, chains):
+def get_pdb_indices(sequences, chains, aligner=None):
     """Align each sequence of MSA against chains in the model. Returns
     indices of chain sequence.
 
@@ -118,12 +119,11 @@ def get_pdb_indices(sequences, chains):
     """
     chain_seqs = list(get_chain_seq(c) for c in chains)
     # align to PDB; get pdb indices for MSA coordinates
-    aligner = Aligner(BLOSUM62.load(), do_codon=False)
     pdb_index_array = []
     for seq in sequences:
         indices = []
         for chain_seq in chain_seqs:
-            i = align_to_pdb(seq, chain_seq, missing=-1)
+            i = align_to_pdb(seq, chain_seq, missing=-1, aligner=aligner)
             indices.append(i)
         pdb_index_array.append(indices)
 
