@@ -146,7 +146,7 @@ def write_coord_array(outfile, coord_array, chains):
 
 
 def compute_distance_matrix(coord_array, radius, default_dist):
-    # make distance matrix
+    """make neighbor distance matrix"""
     n_posns = coord_array.shape[0]
     n_chains = coord_array.shape[1]
     dists = np.empty((n_posns, n_posns))
@@ -207,7 +207,6 @@ if __name__ == "__main__":
     chain_coords = list(get_chain_coords(c) for c in chains)
     coord_array = np.array(list(c[pdb_idx_array[i]]
                                 for i, c in enumerate(chain_coords)))
-    n_posns = coord_array.shape[0]
     coord_array = coord_array.transpose(1, 0, 2)
 
     dist_matrix = compute_distance_matrix(coord_array, radius, default_dist)
