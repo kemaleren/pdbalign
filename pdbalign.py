@@ -157,7 +157,7 @@ def compute_distance_matrix(coord_array, radius, default_dist):
         for j in range(i + 1, n_posns):
             d = np.inf
             for chain1 in range(n_chains):
-                for chain2 in range(chain1, n_chains):
+                for chain2 in range(n_chains):
                     coord1 = coord_array[i, chain1]
                     coord2 = coord_array[j, chain2]
                     new_d = norm(coord1 - coord2)
@@ -170,6 +170,7 @@ def compute_distance_matrix(coord_array, radius, default_dist):
     for i in range(n_posns - 1):
         if np.isinf(dists[i, i + 1]):
             dists[i, i + 1] = dists[i + 1, i] = default_dist
+    dists[np.isinf(dists)] = -1
     return dists
 
 
