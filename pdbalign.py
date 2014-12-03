@@ -1,12 +1,9 @@
-"""Align FASTA sequences to PDB structures.
-
-Outputs residue mapping and 3D coordinates.
+"""Compute coordinates for MSA from a PDB file.
 
 Usage:
-  pdb_align.py [options] <top> <fasta> <pdb>
+  pdb_align.py [options] <fasta> <pdb> <chains>
 
 Options:
-  -t --threshold=<FLOAT>  Threshold for aligning to a structure [default: 0.8]
   -h --help  Display this screen.
 
 """
@@ -22,10 +19,12 @@ from Bio.Seq import Seq
 import Bio.PDB as biopdb
 import Bio.SeqIO as seqio
 from Bio.Alphabet import IUPAC
+from Bio.Alphabet import Gapped
 from Bio.SeqUtils import seq1
 
 from BioExt.scorematrices import BLOSUM62
 from BioExt.align import Aligner
+from BioExt.misc import translate
 
 
 def residue_center(r):
@@ -46,12 +45,14 @@ if True:
     # fasta_file = args["<fasta>"]
     # pdb_file = args["<pdb>"]
 
-    fasta_file = "./env_translated.fa"
-    pdb_file = "4NCO.pdb"
-    top = 3
+    fasta_file = "rhodopsin.fasta"
+    pdb_file = "1U19.pdb"
+    chains = ['A', 'B']
 
     # read FASTA file
-    sequences = list(seqio.parse(fasta_file, "fasta", alphabet=IUPAC.protein))
+    sequences = list(seqio.parse(fasta_file, "fasta",
+                                 alphabet=Gapped(IUPAC.unambiguous_dna)))
+    sequences = list(translate(s) for s in sequences)
 
     # read PDB structures; use filename as id
     structure_id = os.path.basename(pdb_file).split('.')[0]
@@ -60,20 +61,24 @@ if True:
 
     chain_seqs = {}
     chain_coords = {}
-    for chain in structure.get_chains():
+    for c in chains:
+        chain = structure[0][c]
         seq, coords = make_chain_seq(chain)
-        chain_seqs[chain.id] = seq
-        chain_coords[chain.id] = coords
+        chain_seqs[c] = seq
+        chain_coords[c] = coords
 
     # align fasta sequences to PDB sequences
+    # FIXME: alignment loses gaps
     aligner = Aligner(BLOSUM62.load(), do_codon=False)
     results = []
     for seq in sequences:
         alignments = []
-        for chain_id, pdb_seq in chain_seqs.items():
-            score, pdb_seq_aligned, seq_aligned = aligner(pdb_seq, seq)
-            alignments.append((score, chain_id, pdb_seq_aligned, seq_aligned))
-        alignments = sorted(alignments)[::-1][:top]
+        for c in chains:
+            pdb_seq = chain_seqs[c]
+            _, seq_aligned, pdb_seq_aligned = aligner(seq, pdb_seq)
+            seq_aligned = insert_gaps(seq, seq_aligned)
+            seq_aligned = insert_gaps(seq, pdb_seq_aligned)
+            alignments.append((c, pdb_seq_aligned, seq_aligned))
         results.append(alignments)
 
     # transfer coordinates to alignment
@@ -81,11 +86,11 @@ if True:
     for seq, alignments in zip(sequences, results):
         seq_coords = []
         for alignment in alignments:
-            _, chain_id, pdb_seq_aligned, seq_aligned = alignment
+            chain_id, pdb_seq_aligned, seq_aligned = alignment
             coords = chain_coords[chain_id]
             pdb_idx = 0
-            result = []        
-            for idx in range(len(pdb_seq_aligned)):
+            result = []
+            for idx in range(len(seq_aligned)):
                 if pdb_seq_aligned[idx] != "-" and seq_aligned[idx] != "-":
                     result.append(coords[pdb_idx])
                 elif pdb_seq_aligned[idx] == "-" and seq_aligned[idx] != "-":
