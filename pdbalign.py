@@ -15,15 +15,10 @@ Chains should be given as comma-separated letters. Example: A,E,I
 Usage:
   pdbalign.py <fasta> <pdb> <chains> <outfile>
 
-Options:
-  -h --help  Display this screen.
-
 """
 
 import os
 import sys
-
-from docopt import docopt
 
 import numpy as np
 from scipy.stats import mode
@@ -134,11 +129,14 @@ def get_pdb_coords(sequences, model, chains):
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__)
-    chains = args["<chains>"].split(",")
-    fasta_file = args["<fasta>"]
-    pdb_file = args["<pdb>"]
-    outfile = args["<outfile>"]
+    args = sys.argv[1:]
+    if len(args) != 4:
+        sys.stderr.write("Usage: pdbalign.py <fasta> <pdb> <chains> <outfile>\n")
+        sys.exit(1)
+    fasta_file = args[0]
+    pdb_file = args[1]
+    chains = args[2].split(",")
+    outfile = args[3]
 
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",

@@ -9,7 +9,6 @@ Supports multiple coordinates for n-mers.
 
 Dependencies
 ------------
-- [docopt](<https://github.com/docopt/docopt>)
 - [NumPy](<http://www.numpy.org/>)
 - [SciPy](<http://www.scipy.org/>)
 - [BioPython](<http://biopython.org/wiki/Biopython>)
