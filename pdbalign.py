@@ -128,6 +128,19 @@ def get_pdb_coords(sequences, model, chains):
     return coord_array
 
 
+def write_coord_array(outfile, coord_array, chains):
+    n_posns = coord_array.shape[1]
+    coord_array = coord_array.transpose(1, 0, 2).reshape((n_posns, -1))
+    with open(outfile, 'w') as f:
+        header = "\t".join("{}_{}".format(chain, coord)
+                           for chain in chains for coord in "xyz")
+        f.write(header)
+        f.write("\n")
+        for line in coord_array:
+            f.write("\t".join(map(str, line)))
+            f.write("\n")
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if len(args) != 4:
@@ -156,15 +169,4 @@ if __name__ == "__main__":
 
     # do alignment and get coordinates
     coord_array = get_pdb_coords(sequences, model, chains)
-
-    # write output
-    n_posns = coord_array.shape[1]
-    coord_array = coord_array.transpose(1, 0, 2).reshape((n_posns, -1))
-    with open(outfile, 'w') as f:
-        header = "\t".join("{}_{}".format(chain, coord)
-                           for chain in chains for coord in "xyz")
-        f.write(header)
-        f.write("\n")
-        for line in coord_array:
-            f.write("\t".join(map(str, line)))
-            f.write("\n")
+    write_coord_array(outfile, coord_array, chains)
