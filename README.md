@@ -9,11 +9,11 @@ Supports multiple coordinates for n-mers.
 
 Dependencies
 ------------
-- `docopt <https://github.com/docopt/docopt>`_
-- `NumPy <http://www.numpy.org/>`_
-- `SciPy <http://www.scipy.org/>`_
-- `BioPython <http://biopython.org/wiki/Biopython>`_
-- `BioExt <https://github.com/nlhepler/bioext>`_
+- [docopt](<https://github.com/docopt/docopt>)
+- [NumPy](<http://www.numpy.org/>)
+- [SciPy](<http://www.scipy.org/>)
+- [BioPython](<http://biopython.org/wiki/Biopython>)
+- [BioExt](<https://github.com/nlhepler/bioext>)
 
 Usage
 -----
