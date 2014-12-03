@@ -228,4 +228,4 @@ if __name__ == "__main__":
 
     dist_matrix = compute_distance_matrix(coord_array, radius,
                                           default_dist, inf_dist)
-    np.savetxt(outfile, dist_matrix, delimiter=delimiter)
+    np.savetxt(outfile, dist_matrix, fmt="%.2g", delimiter=delimiter)
