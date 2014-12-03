@@ -41,17 +41,26 @@ def residue_center(r):
 
 def get_chain_coords(chain):
     """Residue coordinates."""
-    return np.vstack(list(residue_center(r) for r in chain.get_residues()))
+    result = (list(residue_center(r) for r in chain.get_residues()))
+    # append dummy coordinates
+    result.append([np.nan] * 3)
+    return np.vstack(result)
 
 
-def transfer_pdb_indices(seq_aligned, pdb_seq_aligned):
-    pdb_idx = 0
-    msa_idx = 0  # for inserting original gaps
+def transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1):
+    """Missing indices get `missing`"""
+    pdb_idx = 0  # pointer to position in pdb chain sequence
+    msa_idx = 0  # pointer to position in original MSA coordinates
     result = []
+    # handle leading gaps
+    while seq[msa_idx] == "-":
+        result.append(missing)
+        msa_idx += 1
+    # handle alignment
     for idx in range(len(seq_aligned)):
         try:
             if seq[msa_idx] == "-":
-                result.append(-1)
+                result.append(missing)
                 msa_idx += 1
                 continue
         except IndexError:
@@ -59,13 +68,14 @@ def transfer_pdb_indices(seq_aligned, pdb_seq_aligned):
         if pdb_seq_aligned[idx] != "-" and seq_aligned[idx] != "-":
             result.append(pdb_idx)
         elif pdb_seq_aligned[idx] == "-" and seq_aligned[idx] != "-":
-            result.append(-1)
+            result.append(missing)
         if pdb_seq_aligned[idx] != "-":
             pdb_idx += 1
         if seq_aligned[idx] != "-":
             msa_idx += 1
+    # handle trailing gaps
     for i in range(msa_idx, len(seq)):
-        result.append(-1)
+        result.append(missing)
     return result
 
 
@@ -74,9 +84,9 @@ if True:
     # fasta_file = args["<fasta>"]
     # pdb_file = args["<pdb>"]
 
-    fasta_file = "rhodopsin.fasta"
-    pdb_file = "1U19.pdb"
-    chains = ['A', 'B']
+    fasta_file = "env.fa"
+    pdb_file = "4NCO.pdb"
+    chains = ['A', 'E', 'I']
 
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
@@ -99,7 +109,7 @@ if True:
         indices = []
         for c in chains:
             _, seq_aligned, pdb_seq_aligned = aligner(seq, chain_seqs[c])
-            indices.append(transfer_pdb_indices(seq_aligned, pdb_seq_aligned))
+            indices.append(transfer_pdb_indices(seq_aligned, pdb_seq_aligned, missing=-1))
         pdb_index_array.append(indices)
 
     # collapse to consensus coordinates
