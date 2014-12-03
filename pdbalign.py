@@ -10,13 +10,10 @@ Output has one line per position in the MSA. Each line contains the
 coordinates for the given position for all requested chains. If
 coordinates are not available, each coordinate gets "nan".
 
-Chains should be given as comma-separated letters.
-
-Example:
-  pdb_align.py A,E,I <fasta> <pdb> <outfile>
+Chains should be given as comma-separated letters. Example: A,E,I
 
 Usage:
-  pdb_align.py <chains> <fasta> <pdb> <outfile>
+  pdbalign.py <fasta> <pdb> <chains> <outfile>
 
 Options:
   -h --help  Display this screen.
@@ -111,8 +108,10 @@ def get_pdb_coords(sequences, model, chains):
 
     """
     chain_dict = {c: model[c] for c in chains}
-    chain_seqs = {c: get_chain_seq(chain) for c, chain in chain_dict.items()}
-    chain_coords = {c: get_chain_coords(chain) for c, chain in chain_dict.items()}
+    chain_seqs = {c: get_chain_seq(chain)
+                  for c, chain in chain_dict.items()}
+    chain_coords = {c: get_chain_coords(chain)
+                    for c, chain in chain_dict.items()}
 
     # align to PDB; get pdb indices for MSA coordinates
     aligner = Aligner(BLOSUM62.load(), do_codon=False)
@@ -158,6 +157,7 @@ if __name__ == "__main__":
             raise Exception("Chain '{}' not found. Candidates: {}".format(
                 c, sorted(model.child_dict.keys())))
 
+    # do alignment and get coordinates
     coord_array = get_pdb_coords(sequences, model, chains)
 
     # write output
