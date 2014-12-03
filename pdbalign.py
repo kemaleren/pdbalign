@@ -14,6 +14,7 @@ import sys
 from docopt import docopt
 
 import numpy as np
+from scipy.stats import mode
 
 from Bio.Seq import Seq
 import Bio.PDB as biopdb
@@ -27,17 +28,45 @@ from BioExt.align import Aligner
 from BioExt.misc import translate
 
 
+def get_chain_seq(chain):
+    """Combine residues into a single Bio.Seq."""
+    seq = "".join((r.resname for r in chain.get_residues()))
+    return seq1(seq)
+
+
 def residue_center(r):
     """the mean of the residue's atom coordinates"""
     return np.vstack(list(a.coord for a in r)).mean(axis=0)
 
 
-def make_chain_seq(chain):
-    residues = list(chain.get_residues())
-    seq_3letter = "".join((r.resname for r in residues))
-    seq = seq1(seq_3letter)
-    coords = list(residue_center(r) for r in residues)
-    return seq, coords
+def get_chain_coords(chain):
+    """Residue coordinates."""
+    return np.vstack(list(residue_center(r) for r in chain.get_residues()))
+
+
+def transfer_pdb_indices(seq_aligned, pdb_seq_aligned):
+    pdb_idx = 0
+    msa_idx = 0  # for inserting original gaps
+    result = []
+    for idx in range(len(seq_aligned)):
+        try:
+            if seq[msa_idx] == "-":
+                result.append(-1)
+                msa_idx += 1
+                continue
+        except IndexError:
+            continue
+        if pdb_seq_aligned[idx] != "-" and seq_aligned[idx] != "-":
+            result.append(pdb_idx)
+        elif pdb_seq_aligned[idx] == "-" and seq_aligned[idx] != "-":
+            result.append(-1)
+        if pdb_seq_aligned[idx] != "-":
+            pdb_idx += 1
+        if seq_aligned[idx] != "-":
+            msa_idx += 1
+    for i in range(msa_idx, len(seq)):
+        result.append(-1)
+    return result
 
 
 if True:
@@ -59,58 +88,28 @@ if True:
     parser = biopdb.PDBParser()
     structure = parser.get_structure(structure_id, pdb_file)
 
-    # convert each chain into a Bio.Seq
-    chain_seqs = {}
-    chain_coords = {}
-    for c in chains:
-        chain = structure[0][c]
-        seq, coords = make_chain_seq(chain)
-        chain_seqs[c] = seq
-        chain_coords[c] = coords
+    chain_dict = {c: structure[0][c] for c in chains}
+    chain_seqs = {c: get_chain_seq(chain) for c, chain in chain_dict.items()}
+    chain_coords = {c: get_chain_coords(chain) for c, chain in chain_dict.items()}
 
-    # align fasta sequences to PDB sequences
+    # align and transfer coordinates to alignment
     aligner = Aligner(BLOSUM62.load(), do_codon=False)
-    results = []
+    pdb_index_array = []
     for seq in sequences:
-        alignments = []
+        indices = []
         for c in chains:
-            pdb_seq = chain_seqs[c]
-            _, seq_aligned, pdb_seq_aligned = aligner(seq, pdb_seq)
-            alignments.append((c, seq_aligned, pdb_seq_aligned))
-        results.append(alignments)
+            _, seq_aligned, pdb_seq_aligned = aligner(seq, chain_seqs[c])
+            indices.append(transfer_pdb_indices(seq_aligned, pdb_seq_aligned))
+        pdb_index_array.append(indices)
 
-    # transfer coordinates to alignment
-    all_coords = []
-    for seq, alignments in zip(sequences, results):
-        seq_coords = []
-        for alignment in alignments:
-            chain_id, seq_aligned, pdb_seq_aligned = alignment
-            coords = chain_coords[chain_id]
-            pdb_idx = 0
-            msa_idx = 0  # for inserting original gaps
-            result = []
-            for idx in range(len(seq_aligned)):
-                try:
-                    if seq[msa_idx] == "-":
-                        result.append(np.nan * np.arange(3))
-                        msa_idx += 1
-                        continue
-                except IndexError:
-                    continue
-                if pdb_seq_aligned[idx] != "-" and seq_aligned[idx] != "-":
-                    result.append(coords[pdb_idx])
-                elif pdb_seq_aligned[idx] == "-" and seq_aligned[idx] != "-":
-                    result.append(np.nan * np.arange(3))
-                if pdb_seq_aligned[idx] != "-":
-                    pdb_idx += 1
-                if seq_aligned[idx] != "-":
-                    msa_idx += 1
-            for i in range(msa_idx, len(seq)):
-                result.append(np.nan * np.arange(3))
-            seq_coords.append(result)
-        all_coords.append(seq_coords)
-    all_coords = np.array(all_coords)
+    # collapse to consensus coordinates
+    pdb_index_array = np.array(pdb_index_array, dtype=np.int)
+    pdb_index_array = pdb_index_array.transpose(1, 2, 0)
+    modes, _ = mode(pdb_index_array, axis=2)
+    modes = modes.squeeze().astype(np.int)
 
-    # take consensus coordinates
+    # get coordinates from pdb indices
+    coord_array = np.array(list(chain_coords[c][modes[i]]
+                                for i, c in enumerate(chains)))
 
-    # write output
+    # TODO: write output
