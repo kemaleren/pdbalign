@@ -90,6 +90,8 @@ def align_to_pdb(seq, pdb_seq, missing=-1):
             if seq[msa_idx] == "-":
                 result.append(missing)
                 msa_idx += 1
+                if pdb_seq_aligned[idx] != "-":
+                    pdb_idx += 1
                 continue
         except IndexError:
             continue
