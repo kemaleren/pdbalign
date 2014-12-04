@@ -73,7 +73,8 @@ class TestPdbalign(unittest.TestCase):
                              [5, 0, 5, -1],
                              [0.5, 5, 0, 1],
                              [1, -1, 1, 0]])
-        result = compute_distance_matrix(coords, radius=1.1, default_dist=5)
+        result = compute_distance_matrix(coords, radius=1.1,
+                                         default_dist=5, inf_dist=-1)
         self.assertTrue(np.all(expected == result))
 
 
