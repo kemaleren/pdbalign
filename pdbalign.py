@@ -173,7 +173,6 @@ def write_coord_array(outfile, coord_array, chains):
 
 
 def compute_distance_matrix(coord_array, radius, default_dist, inf_dist):
-    """make neighbor distance matrix"""
     n_posns = coord_array.shape[0]
     n_chains = coord_array.shape[1]
     dists = np.empty((n_posns, n_posns))
