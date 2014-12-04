@@ -23,7 +23,7 @@ Options:
   --default-dist=<FLOAT>   Distance to assign to linear neighbors [default: 5]
   --infinite-dist=<FLOAT>  Distance for disconnected nodes. May be a float or
                            'inf' [default: 0]
-  --delimiter=<STRING>     Delimiter for output [default: ' ']
+  --delimiter=<STRING>     Delimiter for output [default:  ]
   -h --help                Print this screen
 
 """
@@ -228,4 +228,4 @@ if __name__ == "__main__":
 
     dist_matrix = compute_distance_matrix(coord_array, radius,
                                           default_dist, inf_dist)
-    np.savetxt(outfile, dist_matrix, fmt="%.2g", delimiter=delimiter)
+    np.savetxt(outfile, dist_matrix, fmt="%.2f", delimiter=delimiter)
