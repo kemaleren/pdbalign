@@ -200,22 +200,8 @@ def compute_distance_matrix(coord_array, radius, default_dist, inf_dist):
     return dists
 
 
-if __name__ == "__main__":
-    args = docopt(__doc__)
-    fasta_file = args["<fasta>"]
-    pdb_file = args["<pdb>"]
-    chain_ids = args["<chains>"].split(",")
-    outfile = args["<outfile>"]
-    radius = float(args["--radius"])
-    default_dist = float(args["--default-dist"])
-    inf_dist = args["--infinite-dist"]
-    delimiter = args["--delimiter"]
-
-    if inf_dist == "inf":
-        inf_dist = np.inf
-    else:
-        inf_dist = float(inf_dist)
-
+def run(fasta_file, pdb_file, chain_ids, outfile, radius,
+        default_dist, inf_dist, delimiter):
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
                                  alphabet=Gapped(IUPAC.unambiguous_dna)))
@@ -240,3 +226,23 @@ if __name__ == "__main__":
     dist_matrix = compute_distance_matrix(coord_array, radius,
                                           default_dist, inf_dist)
     np.savetxt(outfile, dist_matrix, fmt="%.2f", delimiter=delimiter)
+
+
+if __name__ == "__main__":
+    args = docopt(__doc__)
+    fasta_file = args["<fasta>"]
+    pdb_file = args["<pdb>"]
+    chain_ids = args["<chains>"].split(",")
+    outfile = args["<outfile>"]
+    radius = float(args["--radius"])
+    default_dist = float(args["--default-dist"])
+    inf_dist = args["--infinite-dist"]
+    delimiter = args["--delimiter"]
+
+    if inf_dist == "inf":
+        inf_dist = np.inf
+    else:
+        inf_dist = float(inf_dist)
+
+    run(fasta_file, pdb_file, chain_ids, outfile, radius,
+        default_dist, inf_dist, delimiter)
