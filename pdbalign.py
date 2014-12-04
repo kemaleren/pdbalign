@@ -150,36 +150,36 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     return modes
 
 
-def make_coord_array(idx_array, chains):
+def make_coords(idx_array, chains):
     """get coordinates from pdb indices"""
     chain_coords = list(get_chain_coords(c) for c in chains)
-    coord_array = np.array(list(c[idx_array[i]]
+    coords = np.array(list(c[idx_array[i]]
                                 for i, c in enumerate(chain_coords)))
-    coord_array = coord_array.transpose(1, 0, 2)
-    return coord_array
+    coords = coords.transpose(1, 0, 2)
+    return coords
 
 
-def write_coords(outfile, coord_array, chains):
+def write_coords(outfile, coords, chains):
     """Write the coordinates to a file.
 
     Each line contains all the coordinates for each position.
 
     """
-    n_posns = coord_array.shape[0]    
-    coord_array = coord_array.reshape((n_posns, -1))
+    n_posns = coords.shape[0]
+    coords = coords.reshape((n_posns, -1))
     with open(outfile, 'w') as f:
         header = "\t".join("{}_{}".format(chain.id, coord)
                            for chain in chains for coord in "xyz")
         f.write(header)
         f.write("\n")
-        for line in coord_array:
+        for line in coords:
             f.write("\t".join(map(lambda x: "%.2f" % x, line)))
             f.write("\n")
 
 
-def compute_distance_matrix(coord_array, radius, default_dist, inf_dist):
-    n_posns = coord_array.shape[0]
-    n_chains = coord_array.shape[1]
+def compute_distance_matrix(coords, radius, default_dist, inf_dist):
+    n_posns = coords.shape[0]
+    n_chains = coords.shape[1]
     dists = np.empty((n_posns, n_posns))
     dists[:] = np.inf
     np.fill_diagonal(dists, 0)
@@ -189,8 +189,8 @@ def compute_distance_matrix(coord_array, radius, default_dist, inf_dist):
             d = np.inf
             for chain1 in range(n_chains):
                 for chain2 in range(n_chains):
-                    coord1 = coord_array[i, chain1]
-                    coord2 = coord_array[j, chain2]
+                    coord1 = coords[i, chain1]
+                    coord2 = coords[j, chain2]
                     new_d = norm(coord1 - coord2)
                     if np.isnan(new_d):
                         continue
@@ -226,7 +226,7 @@ def run(fasta_file, pdb_file, chain_ids, outfile, radius,
 
     # do alignment and get coordinates
     idx_array = align_chains_msa(sequences, chains)
-    coords = make_coord_array(idx_array, chains)
+    coords = make_coords(idx_array, chains)
     dist_matrix = compute_distance_matrix(coords, radius,
                                           default_dist, inf_dist)
     write_coords(outfile + ".coords", coords, chains)
