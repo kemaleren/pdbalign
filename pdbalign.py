@@ -159,16 +159,21 @@ def make_coord_array(idx_array, chains):
     return coord_array
 
 
-def write_coord_array(outfile, coord_array, chains):
+def write_coords(outfile, coord_array, chains):
+    """Write the coordinates to a file.
+
+    Each line contains all the coordinates for each position.
+
+    """
+    n_posns = coord_array.shape[0]    
     coord_array = coord_array.reshape((n_posns, -1))
-    n_posns = coord_array.shape[0]
     with open(outfile, 'w') as f:
-        header = "\t".join("{}_{}".format(chain, coord)
+        header = "\t".join("{}_{}".format(chain.id, coord)
                            for chain in chains for coord in "xyz")
         f.write(header)
         f.write("\n")
         for line in coord_array:
-            f.write("\t".join(map(str, line)))
+            f.write("\t".join(map(lambda x: "%.2f" % x, line)))
             f.write("\n")
 
 
@@ -221,11 +226,11 @@ def run(fasta_file, pdb_file, chain_ids, outfile, radius,
 
     # do alignment and get coordinates
     idx_array = align_chains_msa(sequences, chains)
-    coord_array = make_coord_array(idx_array, chains)
-
-    dist_matrix = compute_distance_matrix(coord_array, radius,
+    coords = make_coord_array(idx_array, chains)
+    dist_matrix = compute_distance_matrix(coords, radius,
                                           default_dist, inf_dist)
-    np.savetxt(outfile, dist_matrix, fmt="%.2f", delimiter=delimiter)
+    write_coords(outfile + ".coords", coords, chains)
+    np.savetxt(outfile + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
 
 
 if __name__ == "__main__":
