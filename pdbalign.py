@@ -158,21 +158,7 @@ def make_coord_array(idx_array, chains):
     return coord_array
 
 
-def write_coord_array(outfile, coord_array, chains):
-    coord_array = coord_array.reshape((n_posns, -1))
-    n_posns = coord_array.shape[0]
-    with open(outfile, 'w') as f:
-        header = "\t".join("{}_{}".format(chain, coord)
-                           for chain in chains for coord in "xyz")
-        f.write(header)
-        f.write("\n")
-        for line in coord_array:
-            f.write("\t".join(map(str, line)))
-            f.write("\n")
-
-
 def compute_distance_matrix(coord_array, radius, default_dist, inf_dist):
-    """make neighbor distance matrix"""
     n_posns = coord_array.shape[0]
     n_chains = coord_array.shape[1]
     dists = np.empty((n_posns, n_posns))
