@@ -114,6 +114,7 @@ def align_chain(seq, pdb_seq, missing=-1, aligner=None):
 
 
 def consensus(iterable, flag):
+    # TODO: ignore "missing" values
     c = Counter(iterable)
     common = c.most_common(2)
     if len(common) == 1:
