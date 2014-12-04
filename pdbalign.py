@@ -30,12 +30,12 @@ Options:
 
 import os
 import sys
+from collections import Counter
 
 from docopt import docopt
 
 import numpy as np
 from numpy.linalg import norm
-from scipy.stats import mode
 
 from Bio.Seq import Seq
 import Bio.PDB as biopdb
@@ -113,7 +113,18 @@ def align_chain(seq, pdb_seq, missing=-1, aligner=None):
     return result
 
 
-def align_chains_msa(sequences, chains, aligner=None):
+def consensus(iterable, flag):
+    c = Counter(iterable)
+    common = c.most_common(2)
+    if len(common) == 1:
+        return common[0][0]
+    first, second = common
+    if first[1] > second[1]:
+        return first[0]
+    return flag
+
+
+def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     """Align each sequence of MSA against chains in the model. Returns
     indices of chain sequence.
 
@@ -126,14 +137,14 @@ def align_chains_msa(sequences, chains, aligner=None):
     for seq in sequences:
         indices = []
         for chain_seq in chain_seqs:
-            i = align_chain(seq, chain_seq, missing=-1, aligner=aligner)
+            i = align_chain(seq, chain_seq, missing=missing, aligner=aligner)
             indices.append(i)
         pdb_index_array.append(indices)
 
     # collapse to consensus
     pdb_index_array = np.array(pdb_index_array, dtype=np.int)
     pdb_index_array = pdb_index_array.transpose(1, 2, 0)
-    modes, _ = mode(pdb_index_array, axis=2)
+    modes = np.apply_along_axis(consensus, axis=2, arr=pdb_index_array, flag=missing)
     modes = modes.squeeze().astype(np.int)
     return modes
 

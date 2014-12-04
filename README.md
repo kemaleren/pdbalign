@@ -10,7 +10,6 @@ Supports multiple coordinates for n-mers.
 Dependencies
 ------------
 - [NumPy](<http://www.numpy.org/>)
-- [SciPy](<http://www.scipy.org/>)
 - [BioPython](<http://biopython.org/wiki/Biopython>)
 - [BioExt](<https://github.com/nlhepler/bioext>)
 
