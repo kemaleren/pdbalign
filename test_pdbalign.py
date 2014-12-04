@@ -24,6 +24,19 @@ class TestPdbalign(unittest.TestCase):
     aligner = Aligner(BLOSUM62.load(), do_codon=False,
                       open_insertion=-1, open_deletion=-1)
 
+    def setUp(self):
+        self.chain = Chain("A")
+        residues = [
+            Residue(0, resname="Ala", segid=0),
+            Residue(0, resname="His", segid=1),
+            Residue(0, resname="Ser", segid=2),
+            Residue(0, resname="Val", segid=3),
+            Residue(0, resname="His", segid=4),]
+
+        for r in residues:
+            self.chain.add(r)
+
+
     def test_align_chain(self):
         problems = (
             (Seq("AHSVH"), Seq("AHVH"), [0, 1, -1, 2, 3]),
@@ -46,18 +59,15 @@ class TestPdbalign(unittest.TestCase):
         sequences = [Seq("AHSVH"),
                      Seq("AH-VH"),
                      Seq("A-SVH")]
-        chain = Chain("A")
-        residues = [
-            Residue(0, resname="Ala", segid=0),
-            Residue(0, resname="His", segid=1),
-            Residue(0, resname="Ser", segid=2),
-            Residue(0, resname="Val", segid=3),
-            Residue(0, resname="His", segid=4),]
-
-        for r in residues:
-            chain.add(r)
-        indices = align_chains_msa(sequences, [chain], aligner=self.aligner)
+        indices = align_chains_msa(sequences, [self.chain], aligner=self.aligner)
         expected = np.array([[0, 1, 2, 3, 4]])
+        self.assertTrue(np.all(indices == expected))
+
+    def test_align_chains_msa_no_consensus(self):
+        sequences = [Seq("AHSV"),
+                     Seq("AHSH")]
+        indices = align_chains_msa(sequences, [self.chain], aligner=self.aligner)
+        expected = np.array([[0, 1, 2, -1]])
         self.assertTrue(np.all(indices == expected))
 
     def test_compute_distance_matrix(self):
