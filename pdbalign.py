@@ -148,7 +148,7 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     pdb_index_array = pdb_index_array.transpose(1, 2, 0)
     f = lambda it: consensus((i for i in it if i != missing), flag=missing)
     modes = np.apply_along_axis(f, axis=2, arr=pdb_index_array)
-    modes = modes.squeeze().astype(np.int)
+    modes = modes.astype(np.int)
     return modes
 
 
