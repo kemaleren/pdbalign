@@ -81,11 +81,10 @@ class TestPdbalign(unittest.TestCase):
         c1[:, 1] += 1
         coords = np.hstack([c1, c2]).reshape((4, 2, 2))
         expected = np.array([[0, 5, 0.5, 1],
-                             [5, 0, 5, -1],
+                             [5, 0, 5, np.inf],
                              [0.5, 5, 0, 1],
-                             [1, -1, 1, 0]])
-        result = compute_distance_matrix(coords, radius=1.1,
-                                         default_dist=5, inf_dist=-1)
+                             [1, np.inf, 1, 0]])
+        result = compute_distance_matrix(coords, default_dist=5, inf_dist=np.inf)
         self.assertTrue(np.all(expected == result))
 
     def test_consensus(self):
