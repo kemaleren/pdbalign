@@ -118,10 +118,9 @@ def consensus(iterable, flag):
     if not iterable:
         return flag
     c = Counter(iterable)
-    common = c.most_common(2)
-    if len(common) == 1:
-        return common[0][0]
-    first, second = common
+    if len(c) == 1:
+        return c.most_common()[0][0]
+    first, second = c.most_common(2)
     if first[1] > second[1]:
         return first[0]
     return flag

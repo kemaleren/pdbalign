@@ -92,6 +92,7 @@ class TestPdbalign(unittest.TestCase):
         flag = -1
         problems = (((0, 0, 1, 1), flag),
                     ((0, 0, 0, 1), 0),
+                    ((0, 0, 0, 0), 0),
                     ((), flag))
         for it, exp in problems:
             result = consensus(it, flag=-1)
