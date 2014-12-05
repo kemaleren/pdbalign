@@ -114,7 +114,9 @@ def align_chain(seq, pdb_seq, missing=-1, aligner=None):
 
 
 def consensus(iterable, flag):
-    # TODO: ignore "missing" values
+    """Returns `flag` if there is no consensus."""
+    if not iterable:
+        return flag
     c = Counter(iterable)
     common = c.most_common(2)
     if len(common) == 1:
@@ -145,7 +147,8 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     # collapse to consensus
     pdb_index_array = np.array(pdb_index_array, dtype=np.int)
     pdb_index_array = pdb_index_array.transpose(1, 2, 0)
-    modes = np.apply_along_axis(consensus, axis=2, arr=pdb_index_array, flag=missing)
+    f = lambda it: consensus((i for i in it if i != missing), flag=missing)
+    modes = np.apply_along_axis(f, axis=2, arr=pdb_index_array)
     modes = modes.squeeze().astype(np.int)
     return modes
 

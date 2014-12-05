@@ -16,6 +16,7 @@ from BioExt.scorematrices import BLOSUM62
 from pdbalign import align_chain
 from pdbalign import align_chains_msa
 from pdbalign import compute_distance_matrix
+from pdbalign import consensus
 
 
 class TestPdbalign(unittest.TestCase):
@@ -86,6 +87,15 @@ class TestPdbalign(unittest.TestCase):
         result = compute_distance_matrix(coords, radius=1.1,
                                          default_dist=5, inf_dist=-1)
         self.assertTrue(np.all(expected == result))
+
+    def test_consensus(self):
+        flag = -1
+        problems = (((0, 0, 1, 1), flag),
+                    ((0, 0, 0, 1), 0),
+                    ((), flag))
+        for it, exp in problems:
+            result = consensus(it, flag=-1)
+            self.assertEqual(exp, result)
 
 
 if __name__ == '__main__':
