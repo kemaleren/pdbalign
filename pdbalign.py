@@ -115,9 +115,9 @@ def align_chain(seq, pdb_seq, missing=-1, aligner=None):
 
 def consensus(iterable, flag):
     """Returns `flag` if there is no consensus."""
-    if not iterable:
-        return flag
     c = Counter(iterable)
+    if len(c) == 0:
+        return flag
     if len(c) == 1:
         return c.most_common()[0][0]
     first, second = c.most_common(2)
