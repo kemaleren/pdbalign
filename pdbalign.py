@@ -16,7 +16,7 @@ Output is a human-readable text file of the distance matrix.
 Chains should be seperated by commas. Example: A,E,I
 
 Usage:
-  pdbalign.py [options] <fasta> <pdb> <chains> <outfile>
+  pdbalign.py [options] <fasta> <pdb> <chains> <outname>
 
 Options:
   -r --radius=<FLOAT>      Radius for connecting neighbors [default: 20]
@@ -205,7 +205,7 @@ def compute_distance_matrix(coords, radius, default_dist, inf_dist):
     return dists
 
 
-def run(fasta_file, pdb_file, chain_ids, outfile, radius,
+def run(fasta_file, pdb_file, chain_ids, outname, radius,
         default_dist, inf_dist, delimiter):
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
@@ -229,8 +229,8 @@ def run(fasta_file, pdb_file, chain_ids, outfile, radius,
     coords = make_coords(idx_array, chains)
     dist_matrix = compute_distance_matrix(coords, radius,
                                           default_dist, inf_dist)
-    write_coords(outfile + ".coords", coords, chains)
-    np.savetxt(outfile + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
+    write_coords(outname + ".coords", coords, chains)
+    np.savetxt(outname + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
 
 
 if __name__ == "__main__":
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     fasta_file = args["<fasta>"]
     pdb_file = args["<pdb>"]
     chain_ids = args["<chains>"].split(",")
-    outfile = args["<outfile>"]
+    outname = args["<outname>"]
     radius = float(args["--radius"])
     default_dist = float(args["--default-dist"])
     inf_dist = args["--infinite-dist"]
@@ -249,5 +249,5 @@ if __name__ == "__main__":
     else:
         inf_dist = float(inf_dist)
 
-    run(fasta_file, pdb_file, chain_ids, outfile, radius,
+    run(fasta_file, pdb_file, chain_ids, outname, radius,
         default_dist, inf_dist, delimiter)
