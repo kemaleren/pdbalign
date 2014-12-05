@@ -207,7 +207,7 @@ def compute_distance_matrix(coords, radius, default_dist, inf_dist):
     return dists
 
 
-def run(fasta_file, pdb_file, chain_ids, outname, radius,
+def main(fasta_file, pdb_file, chain_ids, outname, radius,
         default_dist, inf_dist, delimiter):
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
@@ -251,5 +251,5 @@ if __name__ == "__main__":
     else:
         inf_dist = float(inf_dist)
 
-    run(fasta_file, pdb_file, chain_ids, outname, radius,
-        default_dist, inf_dist, delimiter)
+    main(fasta_file, pdb_file, chain_ids, outname, radius,
+         default_dist, inf_dist, delimiter)
