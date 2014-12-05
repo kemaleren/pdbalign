@@ -3,15 +3,17 @@
 """Compute distance matrix for positions in a multiple sequence
 alignment.
 
-Each sequence is aligned to multiple PDB chains. The residue
-coordinates are mapped back to the MSA. Each position gets the most
-common coordinates.
+Each chain in the PDB is aligned to each sequence in the MSA. The
+residue coordinates are mapped back to the MSA. Each in the MSA
+position gets the coordinates of the consensus residue.
 
-Then computes distance matrix for all positions with
-coordinates. Positions without coordinates get a default distance from
-their linear neighbors.
+Then computes the distance matrix for all positions. Positions without
+coordinates get a default distance from their linear neighbors, and
+are disconnected from any other positions.
 
-Output is a human-readable text file of the distance matrix.
+Output:
+  - coordinates for each position and each chain: <outname>.coords
+  - distance matrix: <outname>.dist
 
 Chains should be seperated by commas. Example: A,E,I
 
@@ -19,11 +21,11 @@ Usage:
   pdbalign.py [options] <fasta> <pdb> <chains> <outname>
 
 Options:
-  --default-dist=<FLOAT>   Distance to assign to linear neighbors [default: 5]
-  --infinite-dist=<FLOAT>  Distance for disconnected nodes. May be a float or
-                           'inf' [default: inf]
-  --delimiter=<STRING>     Delimiter for output [default:  ]
-  -h --help                Print this screen
+  --default-dist=<FLOAT>  Distance to assign to linear neighbors [default: 5]
+  --disconnected=<FLOAT>  Distance for disconnected nodes. May be a float or
+                          'inf' [default: inf]
+  --delimiter=<STRING>    Delimiter for output [default:  ]
+  -h --help               Print this screen
 
 """
 
@@ -178,7 +180,7 @@ def write_coords(outfile, coords, chains):
             f.write("\n")
 
 
-def compute_distance_matrix(coords, default_dist, inf_dist):
+def compute_distance_matrix(coords, default_dist, disconnected_dist):
     n_posns = coords.shape[0]
     n_chains = coords.shape[1]
     dists = np.empty((n_posns, n_posns))
@@ -201,12 +203,12 @@ def compute_distance_matrix(coords, default_dist, inf_dist):
     for i in range(n_posns - 1):
         if np.isinf(dists[i, i + 1]):
             dists[i, i + 1] = dists[i + 1, i] = default_dist
-    dists[np.isinf(dists)] = inf_dist
+    dists[np.isinf(dists)] = disconnected_dist
     return dists
 
 
 def main(fasta_file, pdb_file, chain_ids, outname, default_dist,
-         inf_dist, delimiter):
+         disconnected_dist, delimiter):
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
                                  alphabet=Gapped(IUPAC.unambiguous_dna)))
@@ -227,7 +229,7 @@ def main(fasta_file, pdb_file, chain_ids, outname, default_dist,
     # do alignment and get coordinates
     idx_array = align_chains_msa(sequences, chains)
     coords = make_coords(idx_array, chains)
-    dist_matrix = compute_distance_matrix(coords, default_dist, inf_dist)
+    dist_matrix = compute_distance_matrix(coords, default_dist, disconnected_dist)
     write_coords(outname + ".coords", coords, chains)
     np.savetxt(outname + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
 
@@ -239,13 +241,13 @@ if __name__ == "__main__":
     chain_ids = args["<chains>"].split(",")
     outname = args["<outname>"]
     default_dist = float(args["--default-dist"])
-    inf_dist = args["--infinite-dist"]
+    disconnected_dist = args["--disconnected"]
     delimiter = args["--delimiter"]
 
-    if inf_dist == "inf":
-        inf_dist = np.inf
+    if disconnected_dist == "inf":
+        disconnected_dist = np.inf
     else:
-        inf_dist = float(inf_dist)
+        disconnected_dist = float(disconnected_dist)
 
     main(fasta_file, pdb_file, chain_ids, outname, default_dist,
-         inf_dist, delimiter)
+         disconnected_dist, delimiter)
