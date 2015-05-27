@@ -84,7 +84,7 @@ class TestPdbalign(unittest.TestCase):
                              [5, 0, 5, np.inf],
                              [0.5, 5, 0, 1],
                              [1, np.inf, 1, 0]])
-        result = compute_distance_matrix(coords, default_dist=5, inf_dist=np.inf)
+        result = compute_distance_matrix(coords, default_dist=5)
         self.assertTrue(np.all(expected == result))
 
     def test_consensus(self):

@@ -157,7 +157,7 @@ def make_coords(idx_array, chains):
     """get coordinates from pdb indices"""
     chain_coords = list(get_chain_coords(c) for c in chains)
     coords = np.array(list(c[idx_array[i]]
-                                for i, c in enumerate(chain_coords)))
+                           for i, c in enumerate(chain_coords)))
     coords = coords.transpose(1, 0, 2)
     return coords
 
@@ -180,7 +180,7 @@ def write_coords(outfile, coords, chains):
             f.write("\n")
 
 
-def compute_distance_matrix(coords, default_dist, disconnected_dist):
+def compute_distance_matrix(coords, default_dist, disconnected_dist=np.inf):
     n_posns = coords.shape[0]
     n_chains = coords.shape[1]
     dists = np.empty((n_posns, n_posns))
