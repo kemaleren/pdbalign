@@ -50,7 +50,7 @@ from BioExt.align import Aligner
 from BioExt.misc import translate
 
 
-def get_chain_seq(chain):
+def chain_to_seq(chain):
     """Combine residues into a single Bio.Seq."""
     seq = "".join((r.resname for r in chain.get_residues()))
     return seq1(seq)
@@ -134,7 +134,7 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     Result is a np.ndarray with shape (n_chains, n_indices).
 
     """
-    chain_seqs = list(get_chain_seq(c) for c in chains)
+    chain_seqs = list(chain_to_seq(c) for c in chains)
     # align to PDB; get pdb indices for MSA coordinates
     pdb_index_array = []
     for seq in sequences:
