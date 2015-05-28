@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 
-"""Compute distance matrix for positions in a multiple sequence
-alignment.
+"""Given a multiple sequence alignment and a PDB structure, assign 3D
+coordinates to columns in the MSA and compute a distance matrix.
 
-Each chain in the PDB is aligned to each sequence in the MSA. The
-residue coordinates are mapped back to the MSA. Each in the MSA
-position gets the coordinates of the consensus residue.
+The sequences in the MSA are all assumed to be in-frame, and are
+directly translated to a protein sequence before alignment.
 
-Then computes the distance matrix for all positions. Positions without
-coordinates get a default distance from their linear neighbors, and
-are disconnected from any other positions.
+Each chain in the PDB is aligned to each sequence in the translated
+MSA, using the BLOSUM62 scoring matrix. The residue coordinates are
+mapped back to the MSA. For each chain, each column the MSA is
+assigned the coordinates of the consensus residue.
+
+The pairwise distance matrix, in Angstroms, is then computed for all
+columns. Positions without coordinates get a default distance from
+their linear neighbors, and are disconnected from any other
+positions. If there are multiple chains, the minimum distance is used.
 
 Output:
   - coordinates for each position and each chain: <outname>.coords
@@ -21,11 +26,12 @@ Usage:
   pdbalign.py [options] <fasta> <pdb> <chains> <outname>
 
 Options:
-  --default-dist=<FLOAT>  Distance to assign to linear neighbors [default: 5]
-  --disconnected=<FLOAT>  Distance for disconnected nodes. May be a float or
-                          'inf' [default: inf]
-  --delimiter=<STRING>    Delimiter for output [default:  ]
-  -h --help               Print this screen
+  --default-dist=<FLOAT>   Distance, in Angstroms, to assign to linear
+                           neighbors. [default: 5]
+  --disconnected=<FLOAT>   Distance, in Angstroms, to assign to disconnected nodes.
+                           May be a float or 'inf' [default: inf]
+  --delimiter=<STRING>     Delimiter for output [default:  ]
+  -h --help                Print this screen
 
 """
 
@@ -62,54 +68,60 @@ def residue_center(r):
 
 
 def get_chain_coords(chain):
-    """mean coordinates for each residue in the chain, with dummy at end"""
+    """Mean coordinates for each residue in the chain.
+
+    The last entry is a dummy because `-1` is used as the index for
+    positions that are missing coordinates. So `result[-1]` gives the
+    coordinate `[np.nan, np.nan, np.nan]`.
+
+    """
     result = (list(residue_center(r) for r in chain.get_residues()))
-    # append dummy coordinates
     result.append([np.nan] * 3)
     return np.vstack(result)
 
 
-def align_chain(seq, pdb_seq, missing=-1, aligner=None):
-    """Align sequence to PDB chain.
+def align_and_index(seq, target, missing=-1, aligner=None):
+    """Align sequences `seq` and `target` and return indices into `target`.
 
-    Returns a PDB index for each position of the original MSA.
+    Gaps get `missing` value.
 
-    Gaps (either in original MSA or in PDB alignment) get `missing` value.
+    >>> from Bio.Seq import Seq; align_and_index(Seq("AHSVH"), Seq("AHVH"))
+    [0, 1, -1, 2, 3]
 
     """
     if aligner is None:
         # TODO: support different scoring matrices and gap penalties
         # on command line
         aligner = Aligner(BLOSUM62.load(), do_codon=False)
-    _, seq_aligned, pdb_seq_aligned = aligner(seq, pdb_seq)
-    pdb_idx = 0  # pointer to position in pdb chain sequence
-    msa_idx = 0  # pointer to position in original MSA coordinates
+    _, seq_aligned, target_aligned = aligner(seq, target)
+    seq_idx = 0
+    target_idx = 0
     result = []
     # handle leading gaps
-    while seq[msa_idx] == "-":
+    while seq[seq_idx] == "-":
         result.append(missing)
-        msa_idx += 1
+        seq_idx += 1
     # handle alignment
     for idx in range(len(seq_aligned)):
         try:
-            if seq[msa_idx] == "-":
+            if seq[seq_idx] == "-":
                 result.append(missing)
-                msa_idx += 1
-                if pdb_seq_aligned[idx] != "-":
-                    pdb_idx += 1
+                seq_idx += 1
+                if target_aligned[idx] != "-":
+                    target_idx += 1
                 continue
         except IndexError:
             continue
-        if pdb_seq_aligned[idx] != "-" and seq_aligned[idx] != "-":
-            result.append(pdb_idx)
-        elif pdb_seq_aligned[idx] == "-" and seq_aligned[idx] != "-":
+        if target_aligned[idx] != "-" and seq_aligned[idx] != "-":
+            result.append(target_idx)
+        elif target_aligned[idx] == "-" and seq_aligned[idx] != "-":
             result.append(missing)
-        if pdb_seq_aligned[idx] != "-":
-            pdb_idx += 1
+        if target_aligned[idx] != "-":
+            target_idx += 1
         if seq_aligned[idx] != "-":
-            msa_idx += 1
+            seq_idx += 1
     # handle trailing gaps
-    for i in range(msa_idx, len(seq)):
+    for i in range(seq_idx, len(seq)):
         result.append(missing)
     return result
 
@@ -128,10 +140,9 @@ def consensus(iterable, flag):
 
 
 def align_chains_msa(sequences, chains, missing=-1, aligner=None):
-    """Align each sequence of MSA against chains in the model. Returns
-    indices of chain sequence.
+    """For each MSA column, assign a consensus index into each chain.
 
-    Result is a np.ndarray with shape (n_chains, n_indices).
+    The result is a np.ndarray with shape (n_chains, n_columns).
 
     """
     chain_seqs = list(chain_to_seq(c) for c in chains)
@@ -140,7 +151,7 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     for seq in sequences:
         indices = []
         for chain_seq in chain_seqs:
-            i = align_chain(seq, chain_seq, missing=missing, aligner=aligner)
+            i = align_and_index(seq, chain_seq, missing=missing, aligner=aligner)
             indices.append(i)
         pdb_index_array.append(indices)
 
@@ -154,7 +165,11 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
 
 
 def make_coords(idx_array, chains):
-    """get coordinates from pdb indices"""
+    """Get coordinates from pdb indices.
+
+    result shape: [n_columns, n_chains, 3].
+
+    """
     chain_coords = list(get_chain_coords(c) for c in chains)
     coords = np.array(list(c[idx_array[i]]
                            for i, c in enumerate(chain_coords)))

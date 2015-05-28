@@ -13,7 +13,7 @@ from Bio.Alphabet import IUPAC
 from BioExt.align import Aligner
 from BioExt.scorematrices import BLOSUM62
 
-from pdbalign import align_chain
+from pdbalign import align_and_index
 from pdbalign import align_chains_msa
 from pdbalign import compute_distance_matrix
 from pdbalign import consensus
@@ -38,7 +38,7 @@ class TestPdbalign(unittest.TestCase):
             self.chain.add(r)
 
 
-    def test_align_chain(self):
+    def test_align_and_index(self):
         problems = (
             (Seq("AHSVH"), Seq("AHVH"), [0, 1, -1, 2, 3]),
             (Seq("AHVH"), Seq("AHSVH"), [0, 1, 3, 4]),
@@ -53,7 +53,7 @@ class TestPdbalign(unittest.TestCase):
         )
 
         for s, p, e in problems:
-            result = align_chain(s, p, missing=-1, aligner=self.aligner)
+            result = align_and_index(s, p, missing=-1, aligner=self.aligner)
             self.assertEqual(e, result)
 
     def test_align_chains_msa(self):
