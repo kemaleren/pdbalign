@@ -4,7 +4,7 @@ About
 Given a multiple sequence alignment and a PDB structure, assign 3D
 coordinates to columns in the MSA and compute a distance matrix.
 
-The sequences in the MSA are all assumed to be in-frame, and are
+The sequences in the MSA are all assumed to be in-frame. They are
 directly translated to a protein sequence before alignment.
 
 Each chain in the PDB is aligned to each sequence in the translated
