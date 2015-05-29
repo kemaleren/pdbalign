@@ -11,7 +11,7 @@ MSA, using the BLOSUM62 scoring matrix. The residue coordinates are
 mapped back to the MSA. For each chain, each column the MSA is
 assigned the coordinates of the consensus residue.
 
-The pairwise distance matrix, in Angstroms, is then computed for all
+The pairwise distance matrix, in angstroms, is then computed for all
 columns. Positions without coordinates get a default distance from
 their linear neighbors, and are disconnected from any other
 positions. If there are multiple chains, the minimum distance is used.
@@ -26,9 +26,9 @@ Usage:
   pdbalign.py [options] <fasta> <pdb> <chains> <outname>
 
 Options:
-  --default-dist=<FLOAT>   Distance, in Angstroms, to assign to linear
+  --default-dist=<FLOAT>   Distance, in angstroms, to assign to linear
                            neighbors. [default: 5]
-  --disconnected=<FLOAT>   Distance, in Angstroms, to assign to disconnected nodes.
+  --disconnected=<FLOAT>   Distance, in angstroms, to assign to disconnected nodes.
                            May be a float or 'inf' [default: inf]
   --delimiter=<STRING>     Delimiter for output [default:  ]
   -h --help                Print this screen
