@@ -2,7 +2,8 @@ About
 -----
 
 Given a multiple sequence alignment and a PDB structure, assign 3D
-coordinates to columns in the MSA and compute a distance matrix.
+coordinates to columns in the MSA and compute a distance matrix for
+all column pairs.
 
 The sequences in the MSA are all assumed to be in-frame. They are
 directly translated to a protein sequence before alignment.
@@ -46,7 +47,8 @@ contains the following files:
   [PDB database](<http://www.rcsb.org/pdb/explore/explore.do?structureId=3csy>))
 
 We want to include chains I, K, M, which represent the three GP1
-monomers, and chains J, L, N, which represent the GP2 monomers. The utility is run using the following command:
+monomers, and chains J, L, N, which represent the GP2 monomers. The
+script is run using the following command:
 
     pdbalign.py ebola.fasta 3CSY.pdb I,K,M,J,L,N ebola
 
