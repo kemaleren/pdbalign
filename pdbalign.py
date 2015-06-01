@@ -19,6 +19,7 @@ positions. If there are multiple chains, the minimum distance is used.
 Output:
   - coordinates for each position and each chain: <outname>.coords
   - distance matrix: <outname>.dist
+  - translated alignment with chain sequences: <outname>.translated.chains.fasta
 
 Chains should be seperated by commas. Example: A,E,I
 
@@ -45,6 +46,7 @@ import numpy as np
 from numpy.linalg import norm
 
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 import Bio.PDB as biopdb
 import Bio.SeqIO as seqio
 from Bio.Alphabet import IUPAC
@@ -222,6 +224,16 @@ def compute_distance_matrix(coords, default_dist, disconnected_dist=np.inf):
     return dists
 
 
+def aligned_chains(idx_array, chains, chain_ids):
+    result = []
+    for i, c in enumerate(chain_ids):
+        chain_seq = chain_to_seq(chains[i])
+        indices = idx_array[i]
+        final_seq = ''.join(list(chain_seq[idx] if idx != -1 else "-" for idx in indices))
+        result.append(SeqRecord(Seq(final_seq), id="chain {}".format(c)))
+    return result
+
+
 def main(fasta_file, pdb_file, chain_ids, outname, default_dist,
          disconnected_dist, delimiter):
     # read FASTA file
@@ -245,8 +257,10 @@ def main(fasta_file, pdb_file, chain_ids, outname, default_dist,
     idx_array = align_chains_msa(sequences, chains)
     coords = make_coords(idx_array, chains)
     dist_matrix = compute_distance_matrix(coords, default_dist, disconnected_dist)
+    full_alignment = sequences + aligned_chains(idx_array, chains, chain_ids)
     write_coords(outname + ".coords", coords, chains)
     np.savetxt(outname + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
+    seqio.write(full_alignment, outname + ".translated.chains.fasta", 'fasta')
 
 
 if __name__ == "__main__":

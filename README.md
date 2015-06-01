@@ -52,8 +52,9 @@ script is run using the following command:
 
     pdbalign.py ebola.fasta 3CSY.pdb I,K,M,J,L,N ebola
 
-The run creates two files:
+The run creates three files:
 
+- `ebola.translated.chains.fasta`: the translated alignment, with consensus chain residues.
 - `ebola.coords`: one line per column in the MSA, with xyz coordinates for each chain.
 - `ebola.dist`: minimum distance between each pair of columns.
 
