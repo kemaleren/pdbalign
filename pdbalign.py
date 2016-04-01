@@ -32,6 +32,7 @@ Options:
   --disconnected=<FLOAT>   Distance, in angstroms, to assign to disconnected nodes.
                            May be a float or 'inf' [default: inf]
   --delimiter=<STRING>     Delimiter for output [default:  ]
+  --skip-distance          Do not produce pairwise distances
   -h --help                Print this screen
 
 """
@@ -52,6 +53,7 @@ import Bio.SeqIO as seqio
 from Bio.Alphabet import IUPAC
 from Bio.Alphabet import Gapped
 from Bio.SeqUtils import seq1
+from Bio.pairwise2 import format_alignment
 
 from BioExt.scorematrices import BLOSUM62
 from BioExt.align import Aligner
@@ -95,7 +97,9 @@ def align_and_index(seq, target, missing=-1, aligner=None):
         # TODO: support different scoring matrices and gap penalties
         # on command line
         aligner = Aligner(BLOSUM62.load(), do_codon=False)
-    _, seq_aligned, target_aligned = aligner(seq, target)
+    _, target_aligned, seq_aligned = aligner(target, seq)
+    print(seq_aligned)
+    print(target_aligned)
     seq_idx = 0
     target_idx = 0
     result = []
@@ -160,6 +164,8 @@ def align_chains_msa(sequences, chains, missing=-1, aligner=None):
     # collapse to consensus
     pdb_index_array = np.array(pdb_index_array, dtype=np.int)
     pdb_index_array = pdb_index_array.transpose(1, 2, 0)
+    print(pdb_index_array.shape)
+    print(pdb_index_array)
     f = lambda it: consensus((i for i in it if i != missing), flag=missing)
     modes = np.apply_along_axis(f, axis=2, arr=pdb_index_array)
     modes = modes.astype(np.int)
@@ -225,6 +231,7 @@ def compute_distance_matrix(coords, default_dist, disconnected_dist=np.inf):
 
 
 def aligned_chains(idx_array, chains, chain_ids):
+    """Create a list of SeqRecords in alignment coordinates, one per chain."""
     result = []
     for i, c in enumerate(chain_ids):
         chain_seq = chain_to_seq(chains[i])
@@ -235,7 +242,7 @@ def aligned_chains(idx_array, chains, chain_ids):
 
 
 def main(fasta_file, pdb_file, chain_ids, outname, default_dist,
-         disconnected_dist, delimiter):
+         disconnected_dist, delimiter, do_distance=True):
     # read FASTA file
     sequences = list(seqio.parse(fasta_file, "fasta",
                                  alphabet=Gapped(IUPAC.unambiguous_dna)))
@@ -256,11 +263,12 @@ def main(fasta_file, pdb_file, chain_ids, outname, default_dist,
     # do alignment and get coordinates
     idx_array = align_chains_msa(sequences, chains)
     coords = make_coords(idx_array, chains)
-    dist_matrix = compute_distance_matrix(coords, default_dist, disconnected_dist)
     full_alignment = sequences + aligned_chains(idx_array, chains, chain_ids)
     write_coords(outname + ".coords", coords, chains)
-    np.savetxt(outname + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
     seqio.write(full_alignment, outname + ".translated.chains.fasta", 'fasta')
+    if do_distance:
+        dist_matrix = compute_distance_matrix(coords, default_dist, disconnected_dist)
+        np.savetxt(outname + ".dist", dist_matrix, fmt="%.2f", delimiter=delimiter)
 
 
 if __name__ == "__main__":
@@ -278,5 +286,7 @@ if __name__ == "__main__":
     else:
         disconnected_dist = float(disconnected_dist)
 
+    do_distance = not args["--skip-distance"]
+
     main(fasta_file, pdb_file, chain_ids, outname, default_dist,
-         disconnected_dist, delimiter)
+         disconnected_dist, delimiter, do_distance)

@@ -28,7 +28,7 @@ class TestPdbalign(unittest.TestCase):
     def setUp(self):
         self.chain = Chain("A")
         residues = [
-            Residue(0, resname="Ala", segid=0),
+            Residue(0, resname="Trp", segid=0),
             Residue(0, resname="His", segid=1),
             Residue(0, resname="Ser", segid=2),
             Residue(0, resname="Val", segid=3),
@@ -69,6 +69,14 @@ class TestPdbalign(unittest.TestCase):
                      Seq("AHSH")]
         indices = align_chains_msa(sequences, [self.chain], aligner=self.aligner)
         expected = np.array([[0, 1, 2, -1]])
+        self.assertTrue(np.all(indices == expected))
+
+    def test_align_chains_msa_leading_gaps(self):
+        sequences = [Seq("FFWHSVH"),
+                     Seq("IIWH-VH"),
+                     Seq("WWW-SVH")]
+        indices = align_chains_msa(sequences, [self.chain], aligner=self.aligner)
+        expected = np.array([[-1, -1, 0, 1, 2, 3, 4]])
         self.assertTrue(np.all(indices == expected))
 
     def test_compute_distance_matrix(self):
